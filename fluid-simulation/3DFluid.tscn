@@ -1,0 +1,35 @@
+[gd_scene load_steps=6 format=3 uid="uid://y5irtqm282vg"]
+
+[ext_resource type="Script" uid="uid://bajqmn3qrpirt" path="res://fluid3D.cs" id="1_laxys"]
+[ext_resource type="Script" uid="uid://wcc2mhgl4pfk" path="res://camera.gd" id="2_1jeuu"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_laxys"]
+
+[sub_resource type="Sky" id="Sky_1jeuu"]
+sky_material = SubResource("ProceduralSkyMaterial_laxys")
+
+[sub_resource type="Environment" id="Environment_lns6i"]
+background_mode = 2
+sky = SubResource("Sky_1jeuu")
+ambient_light_source = 3
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_laxys")
+gravity = 9.8
+numParticles = 500
+particleSize = 1.0
+partSpacing = 10.0
+targetDensity = 1.0
+pressureMultiplier = 50.0
+boundsSize = Vector3(25, 12, 12)
+dampeningForce = 0.5
+smoothingRadius = 6.0
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8.8429)
+script = ExtResource("2_1jeuu")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_lns6i")

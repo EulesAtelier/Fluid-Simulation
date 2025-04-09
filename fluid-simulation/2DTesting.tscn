@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3 uid="uid://uuvdajydjtm1"]
+
+[ext_resource type="Script" uid="uid://cdvwsnyo2tfya" path="res://NewScript.cs" id="1_gfdud"]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+script = ExtResource("1_gfdud")
+gravity = 0.0
+numParticles = 300
+particleSize = 5.0
+targetDensity = 5.0
+pressureMultiplier = 30.0
+boundsSize = Vector2(1000, 500)
+dampeningForce = 0.5
+smoothingRadius = 17.0
