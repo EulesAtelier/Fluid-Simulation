@@ -1,6 +1,8 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Vector2 = Godot.Vector2;
 public partial class NewScript : Node2D
@@ -27,9 +29,12 @@ public partial class NewScript : Node2D
 
 
     // Optimizations
-    public int[] spatialLookup;
-    public int[] startIndices;
-    float cellSize;
+    public Vector2I[] spatialLookup;
+    public uint[] startIndices;
+    [Export]
+    public float cellSize = 25.0f;
+    float squaredRadius;
+
     public override void _Ready()
     {
 
@@ -37,9 +42,11 @@ public partial class NewScript : Node2D
         predictedPosition = new Vector2[numParticles];
         velocity = new Vector2[numParticles];
         densities = new float[numParticles];
-        spatialLookup = new int[numParticles];
-        startIndices = new int[numParticles];
-        cellSize = smoothingRadius;
+        spatialLookup = new Vector2I[numParticles];
+        startIndices = new uint[numParticles];
+
+        squaredRadius = smoothingRadius * smoothingRadius;
+
 
         int particleRow = (int)(Math.Sqrt(numParticles));
         int particleCol = (numParticles - 1) / particleRow + 1;
@@ -54,41 +61,46 @@ public partial class NewScript : Node2D
             position[i] = new Vector2(x, y);
 
         }
-        // updateSpatialLookup();
+        updateSpatialLookup(position);
 
     }
+    float accumulator = 0f;
+    float fixedTimeStep = 1f / 30f; // 30 Hz simulation
+
     public override void _PhysicsProcess(double delta)
     {
-        // updateSpatialLookup();
-        float deltaTime = (float)delta;
-        Parallel.For(0, numParticles, i =>
-        {
-            velocity[i] += Vector2.Down * (gravity * deltaTime);
-            predictedPosition[i] = position[i] + (velocity[i] * 1 / 120);
-        });
-        Parallel.For(0, numParticles, i =>
-        {
-            densities[i] = CalculateDensity(predictedPosition[i]);
-        });
-        Parallel.For(0, numParticles, i =>
-        {
-            Vector2 pressureForce = CalculatePressureForce(i);
-            Vector2 pressureAcceleration = pressureForce / densities[i];
-            velocity[i] -= pressureAcceleration * deltaTime;
-            velocity[i] -= CalculateViscocityForces(i) * deltaTime;
-        });
-        Parallel.For(0, numParticles, i =>
-        {
-            position[i] += velocity[i] * deltaTime;
-            checkBounds(ref position[i], ref velocity[i]);
-            // GD.Print("V " + velocity[i] + " | P " + position[i] + " | D" + densities[i]);
+        accumulator += (float)delta;
 
-        });
+        while (accumulator >= fixedTimeStep)//reduce physics ticks
+        {
+            accumulator -= fixedTimeStep;
+            float deltaTime = (float)delta;
+            updateSpatialLookup(position);
 
-        // GD.Print("Pressure: " + pressureForce + " PressureAcc: " + pressureAcceleration);
+            Parallel.For(0, numParticles, i =>
+            {
+                velocity[i] += Vector2.Down * (gravity * deltaTime);
+                predictedPosition[i] = position[i] + (velocity[i] * 1 / 120);
+            });
+            Parallel.For(0, numParticles, i =>
+            {
+                densities[i] = CalculateDensity(predictedPosition[i]);
+            });
 
-        QueueRedraw();
-        updateSpatialLookup();
+            Parallel.For(0, numParticles, i =>
+            {
+                Vector2 pressureForce = CalculatePressureForce(i);
+                Vector2 pressureAcceleration = pressureForce / densities[i];
+                velocity[i] -= pressureAcceleration * deltaTime;
+                // velocity[i] -= CalculateViscocityForces(i) * deltaTime;
+            });
+            Parallel.For(0, numParticles, i =>
+            {
+                position[i] += velocity[i] * deltaTime;
+                checkBounds(ref position[i], ref velocity[i]);
+            });
+            QueueRedraw();
+        }
     }
     [Export]
     public Vector2 boundsSize;
@@ -96,9 +108,15 @@ public partial class NewScript : Node2D
     public override void _Draw()
     {
         Rect2 rect2 = new Rect2(Vector2.Zero - (boundsSize / 2), boundsSize);
+
         for (int i = 0; i < position.Length; i++)
         {
-            DrawCircle(position[i], particleSize, Colors.White);
+            DrawCircle(position[i], particleSize, Colors.Blue);
+            // DrawString(ThemeDB.FallbackFont, position[i] + new Vector2(2, 0), "Key: " + spatialLookup[i],
+            //    HorizontalAlignment.Center, 90, 22);
+            // Vector2 cell = new Vector2I((int)(position[i].X / smoothingRadius), (int)(position[i].Y / smoothingRadius));
+            // String str = "(" + cell.X + ", " + cell.Y + ")";
+            // DrawString(ThemeDB.FallbackFont, position[i] + new Vector2(5, 5), str, HorizontalAlignment.Center, 90, 22);
         }
         DrawRect(rect2, Colors.Red, false, 1, false);
         // foreach (var kvp in grid)
@@ -110,6 +128,49 @@ public partial class NewScript : Node2D
         //     Vector2 size = new Vector2(cellSize, cellSize);
         //     DrawRect(new Rect2(topLeft, size), Colors.Green, false); // false = outline only
         // }
+        // HashSet<Vector2I> drawnCells = new HashSet<Vector2I>();
+        // foreach (uint particleIndex in spatialLookup)
+        // {
+        //     Vector2 particlePos = position[particleIndex];
+        //     Vector2I cell = PositiontoCellCord(particlePos);
+
+        //     // Only draw once per cell
+        //     if (drawnCells.Contains(cell))
+        //         continue;
+        //     drawnCells.Add(cell);
+
+        //     // Draw centered on cell
+        //     Vector2 cellCenter = new Vector2(cell.X * smoothingRadius, cell.Y * smoothingRadius);
+        //     Vector2 topLeft = cellCenter - new Vector2(smoothingRadius, smoothingRadius) * 0.5f;
+        //     Vector2 size = new Vector2(smoothingRadius, smoothingRadius);
+
+        //     DrawRect(new Rect2(topLeft, size), Colors.Green, false); // outline only
+        //     DrawString(ThemeDB.FallbackFont, topLeft, cell + "",
+        //        HorizontalAlignment.Center, 90, 22);
+        // }
+        // }
+        Vector2I topLeftCell = PositiontoCellCord(rect2.Position);
+        Vector2I bottomRightCell = PositiontoCellCord(rect2.Position + rect2.Size);
+        for (int x = topLeftCell.X; x <= bottomRightCell.X; x++)
+        {
+            for (int y = topLeftCell.Y; y <= bottomRightCell.Y; y++)
+            {
+                Vector2I cellCoord = new Vector2I(x, y);
+
+                // Center of this cell
+                Vector2 cellCenter = new Vector2(cellCoord.X * smoothingRadius, cellCoord.Y * smoothingRadius);
+
+                // Adjust so the rect is centered around cell center
+                Vector2 topLeft = cellCenter - new Vector2(smoothingRadius, smoothingRadius) * 0.5f;
+                Vector2 size = new Vector2(smoothingRadius, smoothingRadius);
+                uint key = getKeyFromHash(HashCell(cellCoord));
+
+                DrawRect(new Rect2(topLeft, size), Colors.LightGray, false); // Outline only
+                DrawString(ThemeDB.FallbackFont, topLeft + new Vector2(-5, -5), "" + key,
+                   HorizontalAlignment.Center, 90, 8);
+
+            }
+        }
     }
 
     [Export]
@@ -144,48 +205,94 @@ public partial class NewScript : Node2D
     public float CalculateDensity(Vector2 posit)
     {
         float density = 0;
-        // List<int> neighbors = GetNeighborIndices(samplePoint);
-        foreach (Vector2 pos in position)
+        Vector2 p = PositiontoCellCord(posit);
+        for (int startOffsetRow = -1; startOffsetRow <= 1; startOffsetRow++)
         {
-            float dst = (posit - pos).Length();
-            float influence = SmoothingKernel(smoothingRadius, dst);
-            density += mass * influence;
+            for (int startOffsetCol = -1; startOffsetCol <= 1; startOffsetCol++)
+            {
+                uint key = getKeyFromHash(HashCell(p + new Vector2(startOffsetRow, startOffsetCol)));
+                uint cellStartIndex = startIndices[key];
+                if (cellStartIndex == uint.MaxValue)
+                {
+                    // GD.PrintErr($"Skipping cell with key {key} because it is empty (startIndex = {cellStartIndex}).");
+                    continue;
+                }
+                for (uint i = cellStartIndex; i < spatialLookup.Length; i++)
+                {
+                    if (spatialLookup[i].Y != key) break;
+                    uint particleIndex = (uint)spatialLookup[i].X;//X is index
+                    float sqrDist = (position[particleIndex] - posit).LengthSquared();
+
+                    if (sqrDist <= squaredRadius)
+                    {
+                        float dst = (posit - position[particleIndex]).Length();
+                        float influence = SmoothingKernel(smoothingRadius, dst);
+                        density += mass * influence;
+                    }
+                }
+            }
         }
         return density;
+        // float density = 0;
+        // foreach (Vector2 pos in position)
+        // {
+        //     float dst = (posit - pos).Length();
+        //     float influence = SmoothingKernel(smoothingRadius, dst);
+        //     density += mass * influence;
+        // }
+        // return density;
     }
+
     public Vector2 CalculatePressureForce(int particleIndex)
     {
         Vector2 pressureForce = Vector2.Zero;
         Random rng = new Random();
+        Vector2 p = PositiontoCellCord(position[particleIndex]);
 
-        for (int otherParticleIndex = 0; otherParticleIndex < numParticles; otherParticleIndex++)
+        for (int startOffsetRow = -1; startOffsetRow <= 1; startOffsetRow++)
         {
-            if (predictedPosition[particleIndex] == predictedPosition[otherParticleIndex]) continue;
-
-            Vector2 offset = predictedPosition[otherParticleIndex] - predictedPosition[particleIndex];
-            float dst = offset.Length();
-            Vector2 dir;
-            if (dst == 0)
+            for (int startOffsetCol = -1; startOffsetCol <= 1; startOffsetCol++)
             {
-                float x = (float)((rng.NextDouble()));
-                float y = (float)((rng.NextDouble()));
+                uint key = getKeyFromHash(HashCell(p + new Vector2(startOffsetRow, startOffsetCol)));
+                uint cellStartIndex = startIndices[key];
+                if (cellStartIndex == uint.MaxValue)
+                {
+                    // GD.PrintErr($"Skipping cell with key {key} because it is empty (startIndex = {cellStartIndex}).");
+                    continue;
+                }
+                for (uint i = cellStartIndex; i < spatialLookup.Length; i++)
+                {
+                    if (spatialLookup[i].Y != key) break;
+                    uint pIndex = (uint)spatialLookup[i].X;//X is index
+                    if (pIndex == particleIndex) continue; // Skip self
+                    float sqrDist = (predictedPosition[pIndex] - predictedPosition[particleIndex]).LengthSquared();
 
-                dir = new Vector2(x, y);
+                    if (sqrDist < squaredRadius)
+                    {
+                        Vector2 offset = predictedPosition[pIndex] - predictedPosition[particleIndex];
+                        float dst = offset.Length();
+                        Vector2 dir;
+                        // float dst = 1.0f / MathF.Sqrt(offset.X * offset.X + offset.Y * offset.Y);//invDist
+                        // Vector2 dir = offset * dst;
+                        if (dst == 0)
+                        {
+                            float x = (float)((rng.NextDouble()));
+                            float y = (float)((rng.NextDouble()));
+                            dir = new Vector2(x, y);
+                        }
+                        else
+                        {
+                            dir = offset / dst;
+                        }
+                        float slope = SmoothingKernelDerivative(dst, smoothingRadius);
+                        float density = densities[pIndex];
+                        float sharedPressure = CalculateSharedPressure(density, densities[particleIndex]);
+                        // GD.Print("Mass: " + mass + "|" + "Dir: " + dir + "|" + "Slope: " + slope + "|" + "Pressure: " + ConvertDensityToPressure(density) + "|" + "density: " + density + "|");
+                        pressureForce += mass * dir * slope * sharedPressure / density;
+                    }
+                }
             }
-            else
-            {
-                dir = offset / dst;
-            }
-            float slope = SmoothingKernelDerivative(dst, smoothingRadius);
-            float density = densities[otherParticleIndex];
-            float sharedPressure = CalculateSharedPressure(density, densities[particleIndex]);
-            // GD.Print("Mass: " + mass + "|" + "Dir: " + dir + "|" + "Slope: " + slope + "|" + "Pressure: " + ConvertDensityToPressure(density) + "|" + "density: " + density + "|");
-            pressureForce += mass * dir * slope * sharedPressure / density;
-
-            // GD.Print("Mass: " + mass + "|" + "Dir: " + dir + "|" + "Slope: " + slope + "|" + "Pressure: " + ConvertDensityToPressure(density) + "|" + "density: " + density + "|");
-            // pressureForce += mass * dir * slope * ConvertDensityToPressure(density) / density;
         }
-
         return pressureForce;
     }
     public float CalculateSharedPressure(float densityA, float densityB)
@@ -233,48 +340,67 @@ public partial class NewScript : Node2D
 
     // --- Optimization Functions ---
 
+
+    public void updateSpatialLookup(Vector2[] points)
+    {
+        // Array.Clear(spatialLookup, 0, spatialLookup.Length);
+        // Array.Clear(startIndices, 0, startIndices.Length);
+
+        Parallel.For(0, points.Length, i =>
+        {
+            Vector2I cell = PositiontoCellCord(points[i]);
+            uint key = getKeyFromHash(HashCell(cell));
+            spatialLookup[i].Y = (int)key;// I get it, I'm sorting this array so the index becomes diasasociated from itself. Lets use a Vector2 with X and Y as the index and key
+            spatialLookup[i].X = i;
+            startIndices[i] = uint.MaxValue;
+        });
+        Array.Sort(spatialLookup, (a, b) => a.Y.CompareTo(b.Y));
+        // String str = "";
+        for (uint i = 0; i < points.Length; i++)
+        {
+            uint key = (uint)spatialLookup[i].Y;
+            uint keyPrevious;
+            if (i == 0)
+            {
+                keyPrevious = uint.MaxValue;
+            }
+            else
+            {
+                keyPrevious = (uint)spatialLookup[i - 1].Y;
+            }
+            if (key != keyPrevious)
+            {
+                {
+                    startIndices[key] = i;
+                }
+            }
+        }
+        // String str2 = "Cells Key: ";
+        // for (uint i = 0; i < points.Length; i++)
+        // {
+        //     str += startIndices[i] + " ";
+        //     if (startIndices[i] != uint.MaxValue)
+        //     {
+        //         str2 += spatialLookup[startIndices[i]].Y + " ";
+        //     }
+        // }
+        // // GD.Print(str);
+        // GD.Print(str2);
+    }
     public Vector2I PositiontoCellCord(Vector2 point)
     {
         return new Vector2I((int)(point.X / smoothingRadius), (int)(point.Y / smoothingRadius));
     }
-    public void updateSpatialLookup()
+    public uint getKeyFromHash(uint hash)
     {
-        String print = "";
-        Parallel.For(0, numParticles, i =>
-        {
-            Vector2I cell = PositiontoCellCord(position[i]);
-            spatialLookup[i] = ((cell.X * 15823) + (cell.Y * 9737333)) % numParticles;
-            startIndices[i] = int.MaxValue;
-        });
-        Array.Sort(spatialLookup);
-        for (int i = 0; i < numParticles; i++)
-        {
-            print += spatialLookup[i] + " ";
-        }
-        GD.Print(print);
-        Parallel.For(0, numParticles, i =>
-       {
-           int key = spatialLookup[i];
-           int keyPrevious = i == 0 ? int.MaxValue : spatialLookup[i - 1];
-           if (keyPrevious != key)
-           {
-               startIndices[key] = i;
-           }
-       });
-        startIndicesPrint();
+        return (uint)(hash % spatialLookup.Length);
     }
-    public void startIndicesPrint()
+    public uint HashCell(Vector2 cell)
     {
-        String print = "";
-        for (int i = 0; i < spatialLookup.Length; i++)
-        {
-            print += startIndices[i] + " ";
-        }
-        GD.Print(print);
-    }
-    public int getKeyFromHash(int hash)
-    {
-        return hash % (int)spatialLookup.Length;
+        uint x = (uint)(cell.X + 1000000);
+        uint y = (uint)(cell.Y + 1000000);
+
+        return ((x * 92837111) ^ (y * 689287499)) & 0x7fffffff;
     }
     public void ForEachPointWithinRadius(Vector2 samplePoint)
     {
@@ -284,12 +410,12 @@ public partial class NewScript : Node2D
         {
             for (int startOffsetCol = -1; startOffsetCol < 1; startOffsetCol++)
             {
-                int key = getKeyFromHash(HashCell(p + new Vector2(startOffsetRow, startOffsetCol)));
-                int cellStartIndex = startIndices[key];
-                for (int i = cellStartIndex; i < spatialLookup.Length; i++)
+                uint key = getKeyFromHash(HashCell(p + new Vector2(startOffsetRow, startOffsetCol)));
+                uint cellStartIndex = startIndices[key];
+                for (uint i = cellStartIndex; i < spatialLookup.Length; i++)
                 {
-                    if (spatialLookup[i] != key) break;
-                    int particleIndex = spatialLookup[i];//need to look at this
+                    if (spatialLookup[i].Y != key) break;
+                    int particleIndex = spatialLookup[i].Y;//need to look at this
                     Vector2 temp = (position[i] - samplePoint);
                     float sqrDist = temp.LengthSquared();
                     if (sqrDist <= squaredRadius)
@@ -300,9 +426,5 @@ public partial class NewScript : Node2D
 
             }
         }
-    }
-    public int HashCell(Vector2 cell)
-    {
-        return (int)((cell.X * 15823) + (cell.Y * 9737333));
     }
 }

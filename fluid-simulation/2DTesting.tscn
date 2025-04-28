@@ -6,11 +6,10 @@
 
 [node name="Camera2D" type="Camera2D" parent="."]
 script = ExtResource("1_gfdud")
-numParticles = 500
-particleSize = 5.0
-gravity = 50.0
+numParticles = 1000
+gravity = 100.0
 targetDensity = 1.0
-pressureMultiplier = 63.275
-boundsSize = Vector2(800, 450.015)
-dampeningForce = 0.5
-smoothingRadius = 29.0
+pressureMultiplier = 44.905
+boundsSize = Vector2(1000, 600)
+dampeningForce = 0.9
+smoothingRadius = 44.0
