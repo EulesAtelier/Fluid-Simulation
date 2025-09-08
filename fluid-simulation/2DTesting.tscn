@@ -10,6 +10,6 @@ numParticles = 1000
 gravity = 100.0
 targetDensity = 1.0
 pressureMultiplier = 44.905
-boundsSize = Vector2(1000, 600)
+boundsSize = Vector2(2000, 600)
 dampeningForce = 0.9
 smoothingRadius = 44.0
