@@ -15,16 +15,20 @@ ambient_light_source = 3
 
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_1jeuu")
-numParticles = 25
-particleSize = 5.0
-gravity = 0.0
-targetDensity = 1.0
-pressureMultiplier = 1.0
-boundsSize = Vector3(50, 50, 50)
-dampeningForce = 1.0
+numParticles = 1000
+particleSize = 2.0
+partSpacing = 2.0
+gravity = 20.0
+targetDensity = 2.0
+pressureMultiplier = 100.0
+cellSize = 15.0
+boundsSize = Vector3(100, 100, 100)
+dampeningForce = 0.2
+smoothingRadius = 5.0
+viscoucityStrength = 2.0
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8.8429)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 42.2411)
 script = ExtResource("2_1jeuu")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]

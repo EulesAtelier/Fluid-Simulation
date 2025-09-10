@@ -45,19 +45,24 @@ public partial class fluid3DAdvanced : Node3D
         squaredRadius = smoothingRadius * smoothingRadius;
 
 
-        int particleRow = (int)(Math.Sqrt(numParticles));
-        int particleCol = (numParticles - 1) / particleRow + 1;
+        int cubeDim = (int)Math.Ceiling(Math.Pow(numParticles, 1.0 / 3.0)); // Cube root rounded up
+        int particleRow = cubeDim;
+        int particleCol = cubeDim;
+        int particleDepth = cubeDim;
+
         float spacing = particleSize * 2 + partSpacing;
-        // Random rng = new(123);
+
         for (int i = 0; i < numParticles; i++)
         {
-            // float x = (float)((rng.NextDouble() - 0.5) * boundsSize.X);
-            // float y = (float)((rng.NextDouble() - 0.5) * boundsSize.Y);
-            float x = (i % particleRow - particleRow / 2f + 0.5f) * spacing;
-            float y = (i / particleRow - particleCol / 2f + 0.5f) * spacing;
-            float z = (i / particleRow - particleCol / 2f + 0.5f) * spacing;
-            position[i] = new Vector3(x, y, z);
+            int ix = i % particleRow;
+            int iy = (i / particleRow) % particleCol;
+            int iz = i / (particleRow * particleCol);
 
+            float x = (ix - (particleRow - 1) / 2f) * spacing;
+            float y = (iy - (particleCol - 1) / 2f) * spacing;
+            float z = (iz - (particleDepth - 1) / 2f) * spacing;
+
+            position[i] = new Vector3(x, y, z);
         }
         updateSpatialLookup(position);
 
@@ -104,90 +109,27 @@ public partial class fluid3DAdvanced : Node3D
     public Vector3 boundsSize;
     public override void _Process(double delta)
     {
-        for (int i = 0; i < numParticles; i++)
-        {
-            DebugDraw3D.DrawSphere(position[i], particleSize, Colors.Blue, 1.0f);
-        }
+        Parallel.For(0, numParticles, i =>
+            {
+                DebugDraw3D.DrawSphere(position[i], particleSize, Colors.Blue, 1f);
+            });
         DebugDraw2D.SetText("TPS", Engine.PhysicsTicksPerSecond);
         DebugDraw2D.SetText("Frames drawn", Engine.GetFramesDrawn());
         DebugDraw2D.SetText("FPS", Engine.GetFramesPerSecond());
         DebugDraw2D.SetText("TPS", Engine.PhysicsTicksPerSecond);
         DebugDraw2D.SetText("delta", delta);
         DebugDraw3D.DrawBox(Vector3.Zero, Quaternion.Identity, boundsSize, Colors.Red, true, 1);
+        if (Input.IsKeyPressed(Key.R))
+        {
+            _Ready();
+        }
     }
-    // public override void _Draw()
-    // {
-    //     Rect2 rect2 = new Rect2(Vector3.Zero - (boundsSize / 2), boundsSize);
-
-    //     for (int i = 0; i < position.Length; i++)
-    //     {
-    //         DrawCircle(position[i], particleSize, Colors.Blue);
-    //         // DrawString(ThemeDB.FallbackFont, position[i] + new Vector3(2, 0), "Key: " + spatialLookup[i],
-    //         //    HorizontalAlignment.Center, 90, 22);
-    //         // Vector3 cell = new Vector3I((int)(position[i].X / smoothingRadius), (int)(position[i].Y / smoothingRadius));
-    //         // String str = "(" + cell.X + ", " + cell.Y + ")";
-    //         // DrawString(ThemeDB.FallbackFont, position[i] + new Vector3(5, 5), str, HorizontalAlignment.Center, 90, 22);
-    //     }
-    //     DrawRect(rect2, Colors.Red, false, 1, false);
-    //     // foreach (var kvp in grid)
-    //     // {
-    //     //     Vector3I cell = kvp.Key;
-    //     //     if (kvp.Value.Count == 0) continue;
-
-    //     //     Vector3 topLeft = new Vector3(cell.X * cellSize, cell.Y * cellSize);
-    //     //     Vector3 size = new Vector3(cellSize, cellSize);
-    //     //     DrawRect(new Rect2(topLeft, size), Colors.Green, false); // false = outline only
-    //     // }
-    //     // HashSet<Vector3I> drawnCells = new HashSet<Vector3I>();
-    //     // foreach (uint particleIndex in spatialLookup)
-    //     // {
-    //     //     Vector3 particlePos = position[particleIndex];
-    //     //     Vector3I cell = PositiontoCellCord(particlePos);
-
-    //     //     // Only draw once per cell
-    //     //     if (drawnCells.Contains(cell))
-    //     //         continue;
-    //     //     drawnCells.Add(cell);
-
-    //     //     // Draw centered on cell
-    //     //     Vector3 cellCenter = new Vector3(cell.X * smoothingRadius, cell.Y * smoothingRadius);
-    //     //     Vector3 topLeft = cellCenter - new Vector3(smoothingRadius, smoothingRadius) * 0.5f;
-    //     //     Vector3 size = new Vector3(smoothingRadius, smoothingRadius);
-
-    //     //     DrawRect(new Rect2(topLeft, size), Colors.Green, false); // outline only
-    //     //     DrawString(ThemeDB.FallbackFont, topLeft, cell + "",
-    //     //        HorizontalAlignment.Center, 90, 22);
-    //     // }
-    //     // }
-    //     Vector3I topLeftCell = PositiontoCellCord(rect2.Position);
-    //     Vector3I bottomRightCell = PositiontoCellCord(rect2.Position + rect2.Size);
-    //     for (int x = topLeftCell.X; x <= bottomRightCell.X; x++)
-    //     {
-    //         for (int y = topLeftCell.Y; y <= bottomRightCell.Y; y++)
-    //         {
-    //             Vector3I cellCoord = new Vector3I(x, y);
-
-    //             // Center of this cell
-    //             Vector3 cellCenter = new Vector3(cellCoord.X * smoothingRadius, cellCoord.Y * smoothingRadius);
-
-    //             // Adjust so the rect is centered around cell center
-    //             Vector3 topLeft = cellCenter - new Vector3(smoothingRadius, smoothingRadius) * 0.5f;
-    //             Vector3 size = new Vector3(smoothingRadius, smoothingRadius);
-    //             uint key = getKeyFromHash(HashCell(cellCoord));
-
-    //             DrawRect(new Rect2(topLeft, size), Colors.LightGray, false); // Outline only
-    //             DrawString(ThemeDB.FallbackFont, topLeft + new Vector3(-5, -5), "" + key,
-    //                HorizontalAlignment.Center, 90, 8);
-
-    //         }
-    //     }
-    // }
 
     [Export]
     public float dampeningForce;
     public void checkBounds(ref Vector3 cPos, ref Vector3 cVel)
     {
-        Vector3 halfBoundsSize = boundsSize / 2 - Vector3.One * 20f;
+        Vector3 halfBoundsSize = boundsSize / 2;
         if (Math.Abs(cPos.X) > halfBoundsSize.X)
         {
             cPos.X = halfBoundsSize.X * Math.Sign(cPos.X);
@@ -197,6 +139,11 @@ public partial class fluid3DAdvanced : Node3D
         {
             cPos.Y = halfBoundsSize.Y * Math.Sign(cPos.Y);
             cVel.Y *= -1 * dampeningForce;
+        }
+        if (Math.Abs(cPos.Z) > halfBoundsSize.Z)
+        {
+            cPos.Z = halfBoundsSize.Z * Math.Sign(cPos.Z);
+            cVel.Z *= -1 * dampeningForce;
         }
     }
 
@@ -289,7 +236,7 @@ public partial class fluid3DAdvanced : Node3D
                             Vector3 dir;
                             // float dst = 1.0f / MathF.Sqrt(offset.X * offset.X + offset.Y * offset.Y);//invDist
                             // Vector3 dir = offset * dst;
-                            if (dst == 0)
+                            if (dst <= 0.5)
                             {
                                 float x = (float)((rng.NextDouble()));
                                 float y = (float)((rng.NextDouble()));
@@ -340,12 +287,12 @@ public partial class fluid3DAdvanced : Node3D
     {
         Vector3 viscoucityForce = Vector3.Zero;
         Vector3 pos = position[partIndex];
-        for (int i = 0; i < numParticles; i++)
+        Parallel.For(0, numParticles, i =>
         {
             float dst = (pos - position[i]).Length();
             float influence = ViscositySmoothingKernel(dst, smoothingRadius);
             viscoucityForce += (velocity[i] - velocity[partIndex]) * influence;
-        }
+        });
         return viscoucityForce * viscoucityStrength;
     }
     static float ViscositySmoothingKernel(float dst, float radius)
