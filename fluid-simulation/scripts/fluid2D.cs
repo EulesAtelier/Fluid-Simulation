@@ -5,7 +5,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Vector2 = Godot.Vector2;
-public partial class NewScript : Node2D
+public partial class fluid2D : Node2D
 {
     // Simulation Variables
     [Export]
@@ -22,7 +22,7 @@ public partial class NewScript : Node2D
     public float pressureMultiplier;
     //Particle Values
     private Vector2[] velocity;
-    private Vector2[] position;
+    public Vector2[] position;
     public float[] densities;
     private Vector2[] predictedPosition;
 
@@ -34,7 +34,21 @@ public partial class NewScript : Node2D
     [Export]
     public float cellSize = 25.0f;
     float squaredRadius;
-
+    //Rendering
+    [Export]
+    public ColorRect sprite;
+    [Export]
+    public Camera2D cam;
+    [Export]
+    public Color fluidColor;
+    //Controls
+    [Export]
+    public bool randomizePositions = false;
+    [Export]
+    public Vector2 directionalForce = Vector2.Down;
+    [Export]
+    public bool debugMode = false;
+    private Random rng;
     public override void _Ready()
     {
 
@@ -51,13 +65,22 @@ public partial class NewScript : Node2D
         int particleRow = (int)(Math.Sqrt(numParticles));
         int particleCol = (numParticles - 1) / particleRow + 1;
         float spacing = particleSize * 2 + partSpacing;
-        // Random rng = new(123);
+        GD.Randomize();
+        rng = new Random(GD.RandRange(0, 100));
         for (int i = 0; i < numParticles; i++)
         {
-            // float x = (float)((rng.NextDouble() - 0.5) * boundsSize.X);
-            // float y = (float)((rng.NextDouble() - 0.5) * boundsSize.Y);
-            float x = (i % particleRow - particleRow / 2f + 0.5f) * spacing;
-            float y = (i / particleRow - particleCol / 2f + 0.5f) * spacing;
+            float x;
+            float y;
+            if (randomizePositions)
+            {
+                x = (float)((rng.NextDouble() - 0.5) * boundsSize.X);
+                y = (float)((rng.NextDouble() - 0.5) * boundsSize.Y);
+            }
+            else
+            {
+                x = (i % particleRow - particleRow / 2f + 0.5f) * spacing;
+                y = (i / particleRow - particleCol / 2f + 0.5f) * spacing;
+            }
             position[i] = new Vector2(x, y);
 
         }
@@ -79,7 +102,7 @@ public partial class NewScript : Node2D
 
             Parallel.For(0, numParticles, i =>
             {
-                velocity[i] += Vector2.Down * (gravity * deltaTime);
+                velocity[i] += directionalForce * (gravity * deltaTime);
                 predictedPosition[i] = position[i] + (velocity[i] * 1 / 120);
             });
             Parallel.For(0, numParticles, i =>
@@ -92,7 +115,7 @@ public partial class NewScript : Node2D
                 Vector2 pressureForce = CalculatePressureForce(i);
                 Vector2 pressureAcceleration = pressureForce / densities[i];
                 velocity[i] -= pressureAcceleration * deltaTime;
-                // velocity[i] -= CalculateViscocityForces(i) * deltaTime;
+                velocity[i] -= CalculateViscocityForces(i) * deltaTime;
             });
             Parallel.For(0, numParticles, i =>
             {
@@ -102,80 +125,73 @@ public partial class NewScript : Node2D
             QueueRedraw();
         }
     }
+    public override void _Process(double delta)
+    {
+        //Rendering Information
+        ShaderMaterial shaderMat = (ShaderMaterial)sprite.Get("material");
+
+        Vector2[] posArray = new Vector2[position.Length];
+
+        for (int i = 0; i < position.Length; i++)
+        {
+            Vector2 local = position[i];
+            Vector2 world = this.GlobalTransform * local;
+            Vector2 screen = world - sprite.GlobalPosition;
+            posArray[i] = screen;
+        }
+
+        shaderMat.SetShaderParameter("particle_positions", posArray);
+        shaderMat.SetShaderParameter("particle_count", posArray.Length);
+        shaderMat.SetShaderParameter("rect_size", sprite.Size);
+        shaderMat.SetShaderParameter("color", fluidColor);
+    }
+
     [Export]
     public Vector2 boundsSize;
 
     public override void _Draw()
     {
-        Rect2 rect2 = new Rect2(Vector2.Zero - (boundsSize / 2), boundsSize);
-
-        for (int i = 0; i < position.Length; i++)
+        if (debugMode)
         {
-            DrawCircle(position[i], particleSize, Colors.Blue);
-            // DrawString(ThemeDB.FallbackFont, position[i] + new Vector2(2, 0), "Key: " + spatialLookup[i],
-            //    HorizontalAlignment.Center, 90, 22);
-            // Vector2 cell = new Vector2I((int)(position[i].X / smoothingRadius), (int)(position[i].Y / smoothingRadius));
-            // String str = "(" + cell.X + ", " + cell.Y + ")";
-            // DrawString(ThemeDB.FallbackFont, position[i] + new Vector2(5, 5), str, HorizontalAlignment.Center, 90, 22);
-        }
-        DrawRect(rect2, Colors.Red, false, 1, false);
-        // foreach (var kvp in grid)
-        // {
-        //     Vector2I cell = kvp.Key;
-        //     if (kvp.Value.Count == 0) continue;
+            Rect2 rect2 = new Rect2(Vector2.Zero - (boundsSize / 2), boundsSize);
 
-        //     Vector2 topLeft = new Vector2(cell.X * cellSize, cell.Y * cellSize);
-        //     Vector2 size = new Vector2(cellSize, cellSize);
-        //     DrawRect(new Rect2(topLeft, size), Colors.Green, false); // false = outline only
-        // }
-        // HashSet<Vector2I> drawnCells = new HashSet<Vector2I>();
-        // foreach (uint particleIndex in spatialLookup)
-        // {
-        //     Vector2 particlePos = position[particleIndex];
-        //     Vector2I cell = PositiontoCellCord(particlePos);
-
-        //     // Only draw once per cell
-        //     if (drawnCells.Contains(cell))
-        //         continue;
-        //     drawnCells.Add(cell);
-
-        //     // Draw centered on cell
-        //     Vector2 cellCenter = new Vector2(cell.X * smoothingRadius, cell.Y * smoothingRadius);
-        //     Vector2 topLeft = cellCenter - new Vector2(smoothingRadius, smoothingRadius) * 0.5f;
-        //     Vector2 size = new Vector2(smoothingRadius, smoothingRadius);
-
-        //     DrawRect(new Rect2(topLeft, size), Colors.Green, false); // outline only
-        //     DrawString(ThemeDB.FallbackFont, topLeft, cell + "",
-        //        HorizontalAlignment.Center, 90, 22);
-        // }
-        // }
-        Vector2I topLeftCell = PositiontoCellCord(rect2.Position);
-        Vector2I bottomRightCell = PositiontoCellCord(rect2.Position + rect2.Size);
-        for (int x = topLeftCell.X; x <= bottomRightCell.X; x++)
-        {
-            for (int y = topLeftCell.Y; y <= bottomRightCell.Y; y++)
+            for (int i = 0; i < position.Length; i++)
             {
-                Vector2I cellCoord = new Vector2I(x, y);
+                DrawCircle(position[i], particleSize, Colors.Blue);
+                // DrawString(ThemeDB.FallbackFont, position[i] + new Vector2(2, 0), "Key: " + spatialLookup[i],
+                //    HorizontalAlignment.Center, 90, 22);
+                // Vector2 cell = new Vector2I((int)(position[i].X / smoothingRadius), (int)(position[i].Y / smoothingRadius));
+                // String str = "(" + cell.X + ", " + cell.Y + ")";
+                // DrawString(ThemeDB.FallbackFont, position[i] + new Vector2(5, 5), str, HorizontalAlignment.Center, 90, 22);
+            }
+            DrawRect(rect2, Colors.Red, false, 1, false);
+            Vector2I topLeftCell = PositiontoCellCord(rect2.Position);
+            Vector2I bottomRightCell = PositiontoCellCord(rect2.Position + rect2.Size);
+            for (int x = topLeftCell.X; x <= bottomRightCell.X; x++)
+            {
+                for (int y = topLeftCell.Y; y <= bottomRightCell.Y; y++)
+                {
+                    Vector2I cellCoord = new Vector2I(x, y);
 
-                // Center of this cell
-                Vector2 cellCenter = new Vector2(cellCoord.X * smoothingRadius, cellCoord.Y * smoothingRadius);
+                    // Center of this cell
+                    Vector2 cellCenter = new Vector2(cellCoord.X * smoothingRadius, cellCoord.Y * smoothingRadius);
 
-                // Adjust so the rect is centered around cell center
-                Vector2 topLeft = cellCenter - new Vector2(smoothingRadius, smoothingRadius) * 0.5f;
-                Vector2 size = new Vector2(smoothingRadius, smoothingRadius);
-                uint key = getKeyFromHash(HashCell(cellCoord));
+                    // Adjust so the rect is centered around cell center
+                    Vector2 topLeft = cellCenter - new Vector2(smoothingRadius, smoothingRadius) * 0.5f;
+                    Vector2 size = new Vector2(smoothingRadius, smoothingRadius);
+                    uint key = getKeyFromHash(HashCell(cellCoord));
 
-                DrawRect(new Rect2(topLeft, size), Colors.LightGray, false); // Outline only
-                DrawString(ThemeDB.FallbackFont, topLeft + new Vector2(-5, -5), "" + key,
-                   HorizontalAlignment.Center, 90, 8);
+                    DrawRect(new Rect2(topLeft, size), Colors.LightGray, false); // Outline only
+                    DrawString(ThemeDB.FallbackFont, topLeft + new Vector2(-5, -5), "" + key, HorizontalAlignment.Center, 90, 8);
 
+                }
             }
         }
     }
 
     [Export]
     public float dampeningForce;
-    public void checkBounds(ref Vector2 cPos, ref Vector2 cVel)
+    public void checkBounds(ref Vector2 cPos, ref Vector2 cVel) //This can be updated.
     {
         Vector2 halfBoundsSize = boundsSize / 2 - Vector2.One * 20f;
         if (Math.Abs(cPos.X) > halfBoundsSize.X)
@@ -190,7 +206,7 @@ public partial class NewScript : Node2D
         }
     }
 
-    // -- Math ---
+    // -- Math --- ugh
 
     [Export]
     public float smoothingRadius = 1.0f;
@@ -214,13 +230,12 @@ public partial class NewScript : Node2D
                 uint cellStartIndex = startIndices[key];
                 if (cellStartIndex == uint.MaxValue)
                 {
-                    // GD.PrintErr($"Skipping cell with key {key} because it is empty (startIndex = {cellStartIndex}).");
                     continue;
                 }
                 for (uint i = cellStartIndex; i < spatialLookup.Length; i++)
                 {
                     if (spatialLookup[i].Y != key) break;
-                    uint particleIndex = (uint)spatialLookup[i].X;//X is index
+                    uint particleIndex = (uint)spatialLookup[i].X; //X is index
                     float sqrDist = (position[particleIndex] - posit).LengthSquared();
 
                     if (sqrDist <= squaredRadius)
@@ -233,14 +248,6 @@ public partial class NewScript : Node2D
             }
         }
         return density;
-        // float density = 0;
-        // foreach (Vector2 pos in position)
-        // {
-        //     float dst = (posit - pos).Length();
-        //     float influence = SmoothingKernel(smoothingRadius, dst);
-        //     density += mass * influence;
-        // }
-        // return density;
     }
 
     public Vector2 CalculatePressureForce(int particleIndex)
@@ -257,7 +264,6 @@ public partial class NewScript : Node2D
                 uint cellStartIndex = startIndices[key];
                 if (cellStartIndex == uint.MaxValue)
                 {
-                    // GD.PrintErr($"Skipping cell with key {key} because it is empty (startIndex = {cellStartIndex}).");
                     continue;
                 }
                 for (uint i = cellStartIndex; i < spatialLookup.Length; i++)
@@ -304,16 +310,13 @@ public partial class NewScript : Node2D
     {
         float DensityError = density - targetDensity;
         float pressure = DensityError * pressureMultiplier;
-        // GD.Print("DensityError = " + DensityError + " Pressure: " + pressure);
         return pressure;
     }
     static float SmoothingKernelDerivative(float dist, float radius)
     {
-        // GD.Print(dist + " + " + radius);
         if (dist >= radius) return 0;
         float f = radius * radius - dist * dist;
         float scale = (float)(-24 / (Math.PI * Math.Pow(radius, 8)));
-        // GD.Print("scale: " + scale + "|" + "radius: " + radius + "|" + "dist: " + dist + "|" + "math: " + (Math.PI * Math.Pow(radius, 8)));
         return scale * dist * f * f;
     }
     [Export]
@@ -343,9 +346,6 @@ public partial class NewScript : Node2D
 
     public void updateSpatialLookup(Vector2[] points)
     {
-        // Array.Clear(spatialLookup, 0, spatialLookup.Length);
-        // Array.Clear(startIndices, 0, startIndices.Length);
-
         Parallel.For(0, points.Length, i =>
         {
             Vector2I cell = PositiontoCellCord(points[i]);
@@ -355,7 +355,6 @@ public partial class NewScript : Node2D
             startIndices[i] = uint.MaxValue;
         });
         Array.Sort(spatialLookup, (a, b) => a.Y.CompareTo(b.Y));
-        // String str = "";
         for (uint i = 0; i < points.Length; i++)
         {
             uint key = (uint)spatialLookup[i].Y;
@@ -375,17 +374,6 @@ public partial class NewScript : Node2D
                 }
             }
         }
-        // String str2 = "Cells Key: ";
-        // for (uint i = 0; i < points.Length; i++)
-        // {
-        //     str += startIndices[i] + " ";
-        //     if (startIndices[i] != uint.MaxValue)
-        //     {
-        //         str2 += spatialLookup[startIndices[i]].Y + " ";
-        //     }
-        // }
-        // // GD.Print(str);
-        // GD.Print(str2);
     }
     public Vector2I PositiontoCellCord(Vector2 point)
     {

@@ -1,0 +1,130 @@
+[gd_scene load_steps=10 format=3 uid="uid://y5irtqm282vg"]
+
+[ext_resource type="Script" uid="uid://b1ry5fufu80l8" path="res://scripts/fluid3DAdvanced.cs" id="1_1jeuu"]
+[ext_resource type="Script" uid="uid://wcc2mhgl4pfk" path="res://scripts/Helpers and UI/camera.gd" id="2_1jeuu"]
+[ext_resource type="Script" uid="uid://b2amm0o7dymbr" path="res://scripts/Helpers and UI/controller3D.cs" id="3_0uroq"]
+[ext_resource type="Shader" uid="uid://balr42kfbkj6n" path="res://shaders/metaball.gdshader" id="3_oy8p1"]
+[ext_resource type="Script" uid="uid://bceu16ne2m3pr" path="res://scripts/Helpers and UI/swapscene.gd" id="4_b0m6p"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0uroq"]
+render_priority = 0
+shader = ExtResource("3_oy8p1")
+shader_parameter/metaball_count = 0
+shader_parameter/metaball_pos = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/metaball_radius = 0.0
+shader_parameter/iso_threshold = 1.0
+shader_parameter/smoothness = 0.6
+shader_parameter/max_steps = 128
+shader_parameter/hit_epsilon = 0.01
+shader_parameter/box_min = Vector3(-1, -1, -1)
+shader_parameter/box_max = Vector3(1, 1, 1)
+shader_parameter/fluid_color = Color(0.2, 0.7, 1, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_b0m6p"]
+render_priority = 0
+shader = ExtResource("3_oy8p1")
+shader_parameter/metaball_count = 0
+shader_parameter/metaball_pos = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/metaball_radius = 12.11
+shader_parameter/iso_threshold = 1.0
+shader_parameter/smoothness = 1.625
+shader_parameter/max_steps = 128
+shader_parameter/hit_epsilon = 0.07
+shader_parameter/box_min = Vector3(-80, -80, -80)
+shader_parameter/box_max = Vector3(80, 80, 80)
+shader_parameter/fluid_color = Color(0.2, 0.69803923, 1, 0.5019608)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_x1itv"]
+render_priority = 0
+shader = ExtResource("3_oy8p1")
+shader_parameter/metaball_count = 0
+shader_parameter/metaball_pos = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/metaball_radius = 0.0
+shader_parameter/iso_threshold = 1.0
+shader_parameter/smoothness = 0.6
+shader_parameter/max_steps = 128
+shader_parameter/hit_epsilon = 0.01
+shader_parameter/box_min = Vector3(-24.605, -1, -1)
+shader_parameter/box_max = Vector3(1, 1, 1)
+shader_parameter/fluid_color = Color(0.2, 0.7, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_gcfme"]
+material = SubResource("ShaderMaterial_x1itv")
+size = Vector3(80, 80, 80)
+
+[node name="Root Simulation Node" type="Node3D" node_paths=PackedStringArray("mesh", "cam")]
+script = ExtResource("1_1jeuu")
+numParticles = 100
+particleSize = 2.0
+partSpacing = 2.0
+gravity = 20.0
+targetDensity = 2.0
+pressureMultiplier = 100.0
+cellSize = 15.0
+mesh = NodePath("MeshInstance3D")
+shader = SubResource("ShaderMaterial_0uroq")
+cam = NodePath("Camera3D")
+fluidColor = Color(0.1254902, 0.36078432, 1, 1)
+boundsSize = Vector3(60, 55.935, 60)
+dampeningForce = 0.2
+smoothingRadius = 5.0
+viscoucityStrength = 2.0
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 42.2411)
+script = ExtResource("2_1jeuu")
+
+[node name="Control" type="Control" parent="Camera3D" node_paths=PackedStringArray("toggleRandomPositions", "toggleDebug", "colorPicker", "simulation")]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 3.0
+offset_top = 1.0
+offset_right = 1153.0
+offset_bottom = 647.0
+script = ExtResource("3_0uroq")
+toggleRandomPositions = NodePath("VBoxContainer/Randomize")
+toggleDebug = NodePath("VBoxContainer/Debug")
+colorPicker = NodePath("VBoxContainer/ColorPickerButton")
+simulation = NodePath("../..")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Camera3D/Control"]
+layout_mode = 1
+offset_right = 803.0
+offset_bottom = 116.0
+
+[node name="Label" type="Label" parent="Camera3D/Control/VBoxContainer"]
+layout_mode = 2
+text = "Press R to Reset Simulation. Arrow key inputs apply force across simulation. 
+Shift applies upward force. 
+Camera can be moved using WASD.
+Look around using the mouse and right click."
+
+[node name="ColorPickerButton" type="ColorPickerButton" parent="Camera3D/Control/VBoxContainer"]
+custom_minimum_size = Vector2(0, 19.84)
+layout_mode = 2
+color = Color(0.17583996, 0.40767062, 1, 1)
+
+[node name="Randomize" type="CheckBox" parent="Camera3D/Control/VBoxContainer"]
+layout_mode = 2
+button_pressed = true
+text = "Randomize positions"
+
+[node name="Debug" type="CheckBox" parent="Camera3D/Control/VBoxContainer"]
+layout_mode = 2
+text = "Toggle Debug"
+
+[node name="Swab Scene" type="Button" parent="Camera3D/Control"]
+layout_mode = 0
+offset_left = 1068.0
+offset_top = 7.0
+offset_right = 1147.0
+offset_bottom = 38.0
+text = "2D Scene"
+script = ExtResource("4_b0m6p")
+level = "2DTesting"
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+material_override = SubResource("ShaderMaterial_b0m6p")
+mesh = SubResource("BoxMesh_gcfme")
+
+[connection signal="pressed" from="Camera3D/Control/Swab Scene" to="Camera3D/Control/Swab Scene" method="_on_pressed"]

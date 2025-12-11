@@ -1,0 +1,84 @@
+[gd_scene load_steps=13 format=3 uid="uid://cm7pej5cb40qg"]
+
+[ext_resource type="Script" uid="uid://b1ry5fufu80l8" path="res://fluid3DAdvanced.cs" id="1_6mqa7"]
+[ext_resource type="Script" uid="uid://wcc2mhgl4pfk" path="res://camera.gd" id="2_mi1d5"]
+[ext_resource type="Shader" uid="uid://balr42kfbkj6n" path="res://shaders/metaball.gdshader" id="3_36sny"]
+[ext_resource type="Script" uid="uid://bwfyfy3b88eri" path="res://test.gd" id="3_mi1d5"]
+[ext_resource type="Script" uid="uid://dki5rdgj525mc" path="res://MeshInstance3d.cs" id="4_qh084"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_laxys"]
+
+[sub_resource type="Sky" id="Sky_1jeuu"]
+sky_material = SubResource("ProceduralSkyMaterial_laxys")
+
+[sub_resource type="Environment" id="Environment_lns6i"]
+background_mode = 2
+sky = SubResource("Sky_1jeuu")
+ambient_light_source = 3
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mi1d5"]
+render_priority = 0
+shader = ExtResource("3_36sny")
+shader_parameter/ball_pos = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/radi = PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/blend_r = 0.62
+shader_parameter/base_color = Color(0, 0, 1, 1)
+shader_parameter/fresnel_color = Color(0, 0.23137255, 1, 1)
+shader_parameter/fresnel_strength = 5.485
+shader_parameter/fresnel_emition = 6.185
+
+[sub_resource type="BoxMesh" id="BoxMesh_6mqa7"]
+material = SubResource("ShaderMaterial_mi1d5")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_x1itv"]
+render_priority = 0
+shader = ExtResource("3_36sny")
+shader_parameter/ball_pos = PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/radi = PackedFloat32Array(0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/blend_r = 0.0
+shader_parameter/base_color = Color(0, 0, 1, 1)
+shader_parameter/fresnel_color = Color(0, 1, 1, 1)
+shader_parameter/fresnel_strength = 0.0
+shader_parameter/fresnel_emition = 0.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_gcfme"]
+material = SubResource("ShaderMaterial_x1itv")
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_6mqa7")
+numParticles = 10
+particleSize = 2.0
+partSpacing = 2.0
+gravity = 20.0
+targetDensity = 2.0
+pressureMultiplier = 100.0
+cellSize = 15.0
+boundsSize = Vector3(10, 10, 10)
+dampeningForce = 0.2
+smoothingRadius = 5.0
+viscoucityStrength = 2.0
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.626132)
+script = ExtResource("2_mi1d5")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_lns6i")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." node_paths=PackedStringArray("fluid")]
+mesh = SubResource("BoxMesh_6mqa7")
+skeleton = NodePath("../MeshInstance3D")
+script = ExtResource("3_mi1d5")
+fluid = NodePath("..")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." node_paths=PackedStringArray("fluidSim")]
+transform = Transform3D(50, 0, 0, 0, 50, 0, 0, 0, 50, 0, 0, -0.53870296)
+visible = false
+mesh = SubResource("BoxMesh_gcfme")
+script = ExtResource("4_qh084")
+BlendR = 1.9449999999999998
+partRad = 4.525
+_mat = SubResource("ShaderMaterial_x1itv")
+fluidSim = NodePath("..")

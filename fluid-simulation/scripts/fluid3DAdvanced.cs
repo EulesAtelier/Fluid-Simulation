@@ -19,7 +19,7 @@ public partial class fluid3DAdvanced : Node3D
     public float pressureMultiplier;
     //Particle Values
     private Vector3[] velocity;
-    private Vector3[] position;
+    public Vector3[] position;
     public float[] densities;
     private Vector3[] predictedPosition;
 
@@ -31,6 +31,24 @@ public partial class fluid3DAdvanced : Node3D
     [Export]
     public float cellSize = 25.0f;
     float squaredRadius;
+
+    //Rendering
+    [Export]
+    public MeshInstance3D mesh;
+    [Export]
+    public ShaderMaterial shader;
+    [Export]
+    public Camera3D cam;
+    [Export]
+    public Color fluidColor;
+    //Controls
+    [Export]
+    public bool randomizePositions = false;
+    [Export]
+    public Vector3 directionalForce = Vector3.Down;
+    [Export]
+    public bool debugMode = false;
+    private Random rng;
 
     public override void _Ready()
     {
@@ -54,14 +72,35 @@ public partial class fluid3DAdvanced : Node3D
 
         for (int i = 0; i < numParticles; i++)
         {
-            int ix = i % particleRow;
-            int iy = (i / particleRow) % particleCol;
-            int iz = i / (particleRow * particleCol);
+            float x;
+            float y;
+            float z;
+            if (randomizePositions)
+            {
+                int ix = i % particleRow;
+                int iy = (i / particleRow) % particleCol;
+                int iz = i / (particleRow * particleCol);
 
-            float x = (ix - (particleRow - 1) / 2f) * spacing;
-            float y = (iy - (particleCol - 1) / 2f) * spacing;
-            float z = (iz - (particleDepth - 1) / 2f) * spacing;
+                x = (ix - (particleRow - 1) / 2f) * spacing;
+                y = (iy - (particleCol - 1) / 2f) * spacing;
+                z = (iz - (particleDepth - 1) / 2f) * spacing;
 
+                float jitter = spacing * 0.5f;
+
+                x += (float)GD.RandRange(-jitter, jitter);
+                y += (float)GD.RandRange(-jitter, jitter);
+                z += (float)GD.RandRange(-jitter, jitter);
+            }
+            else
+            {
+                int ix = i % particleRow;
+                int iy = (i / particleRow) % particleCol;
+                int iz = i / (particleRow * particleCol);
+
+                x = (ix - (particleRow - 1) / 2f) * spacing;
+                y = (iy - (particleCol - 1) / 2f) * spacing;
+                z = (iz - (particleDepth - 1) / 2f) * spacing;
+            }
             position[i] = new Vector3(x, y, z);
         }
         updateSpatialLookup(position);
@@ -82,7 +121,7 @@ public partial class fluid3DAdvanced : Node3D
 
             Parallel.For(0, numParticles, i =>
             {
-                velocity[i] += Vector3.Down * (gravity * deltaTime);
+                velocity[i] += directionalForce * (gravity * deltaTime);
                 predictedPosition[i] = position[i] + (velocity[i] * 1 / 120);
             });
             Parallel.For(0, numParticles, i =>
@@ -95,34 +134,49 @@ public partial class fluid3DAdvanced : Node3D
                 Vector3 pressureForce = CalculatePressureForce(i);
                 Vector3 pressureAcceleration = pressureForce / densities[i];
                 velocity[i] -= pressureAcceleration * deltaTime;
-                // velocity[i] -= CalculateViscocityForces(i) * deltaTime;
+                velocity[i] -= CalculateViscocityForces(i) * deltaTime;
             });
             Parallel.For(0, numParticles, i =>
             {
                 position[i] += velocity[i] * deltaTime;
                 checkBounds(ref position[i], ref velocity[i]);
             });
-            //            QueueRedraw();
         }
     }
     [Export]
     public Vector3 boundsSize;
     public override void _Process(double delta)
     {
-        Parallel.For(0, numParticles, i =>
-            {
-                DebugDraw3D.DrawSphere(position[i], particleSize, Colors.Blue, 1f);
-            });
-        DebugDraw2D.SetText("TPS", Engine.PhysicsTicksPerSecond);
-        DebugDraw2D.SetText("Frames drawn", Engine.GetFramesDrawn());
-        DebugDraw2D.SetText("FPS", Engine.GetFramesPerSecond());
-        DebugDraw2D.SetText("TPS", Engine.PhysicsTicksPerSecond);
-        DebugDraw2D.SetText("delta", delta);
-        DebugDraw3D.DrawBox(Vector3.Zero, Quaternion.Identity, boundsSize, Colors.Red, true, 1);
-        if (Input.IsKeyPressed(Key.R))
+        if (debugMode)
         {
-            _Ready();
+            Parallel.For(0, numParticles, i =>
+                {
+                    DebugDraw3D.DrawSphere(position[i], particleSize, Colors.Blue, 0.1f);
+                });
+            DebugDraw2D.SetText("TPS", Engine.PhysicsTicksPerSecond);
+            DebugDraw2D.SetText("Frames drawn", Engine.GetFramesDrawn());
+            DebugDraw2D.SetText("FPS", Engine.GetFramesPerSecond());
+            DebugDraw2D.SetText("TPS", Engine.PhysicsTicksPerSecond);
+            DebugDraw2D.SetText("delta", delta);
+            DebugDraw3D.DrawBox(Vector3.Zero, Quaternion.Identity, boundsSize, Colors.Red, true, 1);
         }
+
+        ShaderMaterial shaderMat = (ShaderMaterial)mesh.Get("material_override");
+
+        Vector3[] worldPositions = new Vector3[position.Length];
+        for (int i = 0; i < position.Length; i++)
+        {
+            var xf = mesh.GlobalTransform;
+            var basis_no_scale = xf.Basis.Orthonormalized();
+            var noScaleTransform = new Transform3D(basis_no_scale, xf.Origin);
+
+            worldPositions[i] = noScaleTransform.AffineInverse() * position[i];
+        }
+
+        shaderMat.SetShaderParameter("metaball_pos", position);
+        shaderMat.SetShaderParameter("metaball_count", position.Length);
+        shaderMat.SetShaderParameter("fluid_color", fluidColor);
+
     }
 
     [Export]
@@ -147,7 +201,7 @@ public partial class fluid3DAdvanced : Node3D
         }
     }
 
-    // -- Math ---
+    // -- Math --- yay this is soooooo easy im having sooooo much fun
 
     [Export]
     public float smoothingRadius = 1.0f;
@@ -173,7 +227,6 @@ public partial class fluid3DAdvanced : Node3D
                     uint cellStartIndex = startIndices[key];
                     if (cellStartIndex == uint.MaxValue)
                     {
-                        // GD.PrintErr($"Skipping cell with key {key} because it is empty (startIndex = {cellStartIndex}).");
                         continue;
                     }
                     for (uint i = cellStartIndex; i < spatialLookup.Length; i++)
@@ -193,14 +246,6 @@ public partial class fluid3DAdvanced : Node3D
             }
         }
         return density;
-        // float density = 0;
-        // foreach (Vector3 pos in position)
-        // {
-        //     float dst = (posit - pos).Length();
-        //     float influence = SmoothingKernel(smoothingRadius, dst);
-        //     density += mass * influence;
-        // }
-        // return density;
     }
 
     public Vector3 CalculatePressureForce(int particleIndex)
@@ -219,7 +264,6 @@ public partial class fluid3DAdvanced : Node3D
                     uint cellStartIndex = startIndices[key];
                     if (cellStartIndex == uint.MaxValue)
                     {
-                        // GD.PrintErr($"Skipping cell with key {key} because it is empty (startIndex = {cellStartIndex}).");
                         continue;
                     }
                     for (uint i = cellStartIndex; i < spatialLookup.Length; i++)
@@ -234,8 +278,6 @@ public partial class fluid3DAdvanced : Node3D
                             Vector3 offset = predictedPosition[pIndex] - predictedPosition[particleIndex];
                             float dst = offset.Length();
                             Vector3 dir;
-                            // float dst = 1.0f / MathF.Sqrt(offset.X * offset.X + offset.Y * offset.Y);//invDist
-                            // Vector3 dir = offset * dst;
                             if (dst <= 0.5)
                             {
                                 float x = (float)((rng.NextDouble()));
@@ -251,7 +293,6 @@ public partial class fluid3DAdvanced : Node3D
                             float slope = SmoothingKernelDerivative(dst, smoothingRadius);
                             float density = densities[pIndex];
                             float sharedPressure = CalculateSharedPressure(density, densities[particleIndex]);
-                            // GD.Print("Mass: " + mass + "|" + "Dir: " + dir + "|" + "Slope: " + slope + "|" + "Pressure: " + ConvertDensityToPressure(density) + "|" + "density: " + density + "|");
                             pressureForce += mass * dir * slope * sharedPressure / density;
                         }
                     }
@@ -269,16 +310,13 @@ public partial class fluid3DAdvanced : Node3D
     {
         float DensityError = density - targetDensity;
         float pressure = DensityError * pressureMultiplier;
-        // GD.Print("DensityError = " + DensityError + " Pressure: " + pressure);
         return pressure;
     }
     static float SmoothingKernelDerivative(float dist, float radius)
     {
-        // GD.Print(dist + " + " + radius);
         if (dist >= radius) return 0;
         float f = radius * radius - dist * dist;
         float scale = (float)(-24 / (Math.PI * Math.Pow(radius, 8)));
-        // GD.Print("scale: " + scale + "|" + "radius: " + radius + "|" + "dist: " + dist + "|" + "math: " + (Math.PI * Math.Pow(radius, 8)));
         return scale * dist * f * f;
     }
     [Export]
